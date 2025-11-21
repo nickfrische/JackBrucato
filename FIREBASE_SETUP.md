@@ -9,22 +9,41 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Allow anyone to read published monthly brus
-    match /monthlyBrus/{bruId} {
-      allow read: if resource.data.status == 'published' || request.auth != null;
-      allow create, update, delete: if request.auth != null;
+    function isAdmin() {
+      return request.auth != null && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
     
-    // Allow anyone to read site content
-    match /siteContent/{document=**} {
+    // Users collection
+    match /users/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null;
+    }
+    
+    // Special count document
+    match /users/count {
       allow read: if true;
       allow write: if request.auth != null;
     }
     
-    // Allow anyone to subscribe (create), admin to read/manage
+    // Monthly Brus - anyone can read published, only admins can write
+    match /monthlyBrus/{bruId} {
+      allow read: if resource.data.status == 'published' || isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // Site Content - anyone can read, only admins can write
+    match /siteContent/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    // Subscribers - anyone can subscribe, only admins can manage
     match /subscribers/{subscriberId} {
       allow create: if true;
-      allow read, update, delete: if request.auth != null;
+      allow read, update, delete: if isAdmin();
     }
   }
 }
@@ -50,64 +69,50 @@ service firebase.storage {
 
 1. Go to Firebase Console > Authentication > Sign-in method
 2. Enable "Google" provider
-3. Add your domain to authorized domains
+3. Add your domain to authorized domains (localhost is already added by default)
 
-## 4. Initial Data Setup
+## 4. Initialize Firebase Data
 
-After deploying the rules, you need to create an initial siteContent document:
+Run this command to create the initial siteContent document:
 
-1. Go to Firestore Database
-2. Create collection: `siteContent`
-3. Create document with ID: `main`
-4. Add these fields:
-
-```json
-{
-  "hero": {
-    "heading": "Jack Brucato",
-    "subheading": "Author of The Monthly Bru",
-    "headshotUrl": "",
-    "ctaButtons": [
-      {
-        "text": "Read Latest Bru",
-        "link": "#monthly-bru"
-      },
-      {
-        "text": "View Portfolio",
-        "link": "#portfolio"
-      }
-    ]
-  },
-  "about": {
-    "content": "<p>Welcome to my portfolio</p>",
-    "image": ""
-  },
-  "portfolio": {
-    "content": "<p>My professional work</p>",
-    "image": "",
-    "ctaText": "Let's Work Together",
-    "ctaLink": "#contact"
-  },
-  "interests": {
-    "books": [],
-    "podcasts": [],
-    "hobbies": []
-  },
-  "contact": {
-    "email": "your@email.com",
-    "socialLinks": {
-      "linkedin": "",
-      "twitter": "",
-      "instagram": ""
-    }
-  },
-  "branding": {
-    "primaryColor": "#000000",
-    "secondaryColor": "#666666"
-  }
-}
+```bash
+npm run init-firebase
 ```
 
-## 5. Deploy Rules
+## 5. How Admin Access Works
+
+**First User = Admin**
+- The **first person** to sign in with Google will automatically become an admin
+- Their user document will be created with `role: 'admin'`
+- They will have full access to all admin features
+
+**Subsequent Users = Viewers**
+- Anyone who signs in after the first user will be a `viewer`
+- They can only view published content
+- They cannot access `/admin` routes
+
+**To Make Additional Admins:**
+1. Go to Firebase Console > Firestore Database
+2. Find the user document in the `users` collection
+3. Change their `role` field from `'viewer'` to `'admin'`
+
+## 6. Deploy Rules
 
 Click "Publish" in both Firestore Rules and Storage Rules tabs.
+
+## 7. Start Using the Site
+
+1. Visit http://localhost:3000
+2. Click "Admin Login" to sign in with Google (you'll be the first admin!)
+3. Access the admin panel at `/admin`
+4. Edit site content at `/admin/site-content`
+5. Create Monthly Bru posts at `/admin/monthly-brus/new`
+
+## Collections Structure
+
+Your Firestore will have these collections:
+
+- `users` - User accounts with roles (admin/viewer)
+- `siteContent` - Main document with hero, about, portfolio, interests, contact
+- `monthlyBrus` - Blog posts with rich content
+- `subscribers` - Newsletter email subscribers

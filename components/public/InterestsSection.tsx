@@ -15,12 +15,14 @@ export default function InterestsSection() {
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         setContent(docSnap.data().interests as SiteContent['interests']);
+      } else {
+        setContent({ books: [], podcasts: [], hobbies: [] });
       }
     }
     fetchContent();
   }, []);
 
-  if (!content) return <div className="py-20 text-center">Loading...</div>;
+  if (!content) return null;
 
   return (
     <section className="py-20 px-4 bg-gray-50" id="interests">

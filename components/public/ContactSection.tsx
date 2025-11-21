@@ -14,12 +14,14 @@ export default function ContactSection() {
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         setContent(docSnap.data().contact as SiteContent['contact']);
+      } else {
+        setContent({ email: 'your@email.com', socialLinks: {} });
       }
     }
     fetchContent();
   }, []);
 
-  if (!content) return <div className="py-20 text-center">Loading...</div>;
+  if (!content) return null;
 
   return (
     <section className="py-20 px-4 bg-gray-50" id="contact">

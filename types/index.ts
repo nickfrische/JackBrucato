@@ -5,6 +5,17 @@ export interface User {
   email: string | null;
   displayName: string | null;
   photoURL: string | null;
+  isAdmin?: boolean;
+}
+
+export interface UserDoc {
+  uid: string;
+  email: string;
+  displayName: string;
+  photoURL: string;
+  role: 'admin' | 'viewer';
+  createdAt: Timestamp;
+  lastLogin: Timestamp;
 }
 
 export interface MonthlyBru {

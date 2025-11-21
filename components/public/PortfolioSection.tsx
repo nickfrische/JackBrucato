@@ -15,12 +15,14 @@ export default function PortfolioSection() {
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         setContent(docSnap.data().portfolio as SiteContent['portfolio']);
+      } else {
+        setContent({ content: '<h2>My Work</h2><p>Add your professional work here.</p>', image: '', ctaText: "Let's Work Together", ctaLink: '#contact' });
       }
     }
     fetchContent();
   }, []);
 
-  if (!content) return <div className="py-20 text-center">Loading...</div>;
+  if (!content) return null;
 
   return (
     <section className="py-20 px-4 bg-white" id="portfolio">

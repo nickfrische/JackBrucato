@@ -15,6 +15,16 @@ export default function HeroSection() {
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         setContent(docSnap.data().hero as SiteContent['hero']);
+      } else {
+        setContent({
+          heading: 'Jack Brucato',
+          subheading: 'Author of The Monthly Bru',
+          headshotUrl: '',
+          ctaButtons: [
+            { text: 'Read Latest Bru', link: '/monthly-brus' },
+            { text: 'View Portfolio', link: '#portfolio' }
+          ]
+        });
       }
     }
     fetchContent();

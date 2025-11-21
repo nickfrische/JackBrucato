@@ -2,7 +2,8 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User as FirebaseUser, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase';
 import { User } from '@/types';
 
 interface AuthContextType {
@@ -26,13 +27,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser: FirebaseUser | null) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
+        const userDocRef = doc(db, 'users', firebaseUser.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        let isAdmin = false;
+
+        if (userDoc.exists()) {
+          isAdmin = userDoc.data().role === 'admin';
+          await setDoc(userDocRef, {
+            lastLogin: Timestamp.now()
+          }, { merge: true });
+        } else {
+          const usersSnapshot = await getDoc(doc(db, 'users', 'count'));
+          const isFirstUser = !usersSnapshot.exists();
+
+          await setDoc(userDocRef, {
+            uid: firebaseUser.uid,
+            email: firebaseUser.email,
+            displayName: firebaseUser.displayName,
+            photoURL: firebaseUser.photoURL,
+            role: isFirstUser ? 'admin' : 'viewer',
+            createdAt: Timestamp.now(),
+            lastLogin: Timestamp.now(),
+          });
+
+          if (isFirstUser) {
+            await setDoc(doc(db, 'users', 'count'), { initialized: true });
+          }
+
+          isAdmin = isFirstUser;
+        }
+
         setUser({
           uid: firebaseUser.uid,
           email: firebaseUser.email,
           displayName: firebaseUser.displayName,
           photoURL: firebaseUser.photoURL,
+          isAdmin,
         });
       } else {
         setUser(null);

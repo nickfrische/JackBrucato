@@ -14,12 +14,14 @@ export default function AboutSection() {
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         setContent(docSnap.data().about as SiteContent['about']);
+      } else {
+        setContent({ content: '<h2>About Me</h2><p>Welcome! Edit this content in the admin panel.</p>', image: '' });
       }
     }
     fetchContent();
   }, []);
 
-  if (!content) return <div className="py-20 text-center">Loading...</div>;
+  if (!content) return null;
 
   return (
     <section className="py-20 px-4 bg-white" id="about">
